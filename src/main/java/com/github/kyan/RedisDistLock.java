@@ -1,4 +1,4 @@
-package com.kyan.rdl;
+package com.github.kyan;
 
 import java.time.LocalTime;
 import java.util.UUID;
@@ -26,7 +26,6 @@ public class RedisDistLock {
     private static final String NOT_EXIST = "NX";
     private static final String EXPIRE = "PX";
     private static final String SUCCESS = "OK";
-    private static final int DEFAULT_EXPIRE_TIME = 30000;
     private static final int DEFAULT_ACQUIRY_RESOLUTION_MILLIS = 100;
     private RedisTool rt;
     private String lockKey;
@@ -40,18 +39,21 @@ public class RedisDistLock {
 
     //Initiate lock value with random UUID + thread ID
     public RedisDistLock(String lockKey) {
-        this(lockKey, UUID.randomUUID().toString() + Thread.currentThread().getId());
+        this(lockKey, UUID.randomUUID().toString() + ":" + Thread.currentThread().getId());
     }
 
     /**
-     * Acquires the lock if it's available; If the lock isn't available
-     * a thread gets blocked until the lock is released
+     * Acquires the lock.
+     *
+     * If it's available then return;
+     * If the lock isn't available the current thread gets blocked until the lock is released
      *
      * 阻塞式获取锁
+     * @param lockTimeout 锁的过期时间
      */
-    public void lock() {
+    public void lock(long lockTimeout) {
         while (true) {
-            String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, DEFAULT_EXPIRE_TIME);//expire in 30sec
+            String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, lockTimeout);//expire in lockTimeout
             if (SUCCESS.equals(ret)) {
                 System.out.println(String.format("Thread: %s acquires lock with success; Time at: %s",
                         Thread.currentThread().getName(), LocalTime.now()));
@@ -69,10 +71,11 @@ public class RedisDistLock {
      * immediately, return true if locking succeeds
      *
      * 获取锁，如果无法获取立即返回
+     * @param lockTimeout 锁的过期时间
      * @return
      */
-    public boolean tryLock() {
-        String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, DEFAULT_EXPIRE_TIME);
+    public boolean tryLock(long lockTimeout) {
+        String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, lockTimeout);
         if (SUCCESS.equals(ret)) {
             System.out.println(String.format("Thread: %s acquires lock with success; Time at: %s",
                     Thread.currentThread().getName(), LocalTime.now()));
@@ -84,17 +87,18 @@ public class RedisDistLock {
     }
 
     /**
-     * Similar to tryLock(), except it waits up the given timeout
+     * Similar to tryLock(), except it waits up the given waitTime
      * before giving up trying to acquire the lock
      *
-     * 获取锁，并且设置一个获取锁的timeout时间
-     * @param timeout milliseconds
+     * 获取锁，如果无法获取，一直尝试直到waitTime结束
+     * @param waitTime 尝试获取锁的等待时间
+     * @param lockTimeout 锁的过期时间
      * @return
      */
-    public boolean tryLock(long timeout) {
-        long end = System.currentTimeMillis() + timeout;
+    public boolean tryLock(long waitTime, long lockTimeout) {
+        long end = System.currentTimeMillis() + waitTime;
         while (System.currentTimeMillis() < end) {
-            String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, DEFAULT_EXPIRE_TIME);
+            String ret = rt.set(lockKey, lockValue, NOT_EXIST, EXPIRE, lockTimeout);
             if (SUCCESS.equals(ret)) {
                 System.out.println(String.format("Thread: %s acquires lock with success; Time at: %s",
                         Thread.currentThread().getName(), LocalTime.now()));
@@ -121,44 +125,41 @@ public class RedisDistLock {
                 " return 0" +
                 " end";
         rt.eval(checkAndDelScript, 1, lockKey, lockValue);
-        System.out.println(String.format("Thread %s releases lock; Time at: %s", Thread.currentThread().getName(), LocalTime.now()));
+        System.out.println(String.format("Thread: %s releases lock; Time at: %s", Thread.currentThread().getName(), LocalTime.now()));
     }
 
     private void sleepBySec(int sec) {
         try {
             Thread.sleep(sec * 1000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
         RedisDistLock redisDistLock = new RedisDistLock("lock");
-        Thread threaA = new Thread("A") {
+        Thread threadA = new Thread("A") {
             @Override
             public void run() {
-                redisDistLock.lock();
+                redisDistLock.lock(30000);
                 try {
-                    sleep(5000);
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
                 redisDistLock.unlock();
             }
         };
-        Thread threaB = new Thread("B") {
+        Thread threadB = new Thread("B") {
             @Override
             public void run() {
                 try {
-                    sleep(100);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
-                redisDistLock.lock();
+                redisDistLock.lock(30000);
             }
         };
-        threaA.start();
-        threaB.start();
+        threadA.start();
+        threadB.start();
     }
 
 }

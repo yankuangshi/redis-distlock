@@ -1,4 +1,4 @@
-package com.kyan.rdl;
+package com.github.kyan;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,6 +99,22 @@ public class RedisTool {
                 jedis.close();
             }
         }
+    }
+
+    public Long ttl(final String key) {
+        Jedis jedis = null;
+        Long ret = null;
+        try {
+            jedis = pool.getResource();
+            ret = jedis.ttl(key);
+        } catch (Exception ex) {
+            logger.error(ex.getMessage());
+        } finally {
+            if (jedis != null) {
+                jedis.close();
+            }
+        }
+        return ret;
     }
 
     //eval lua script
