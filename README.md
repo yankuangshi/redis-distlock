@@ -9,11 +9,11 @@
 如果不同的请求对同一个或者同一组资源读取并修改时，无法保持按序执行，无法保证一个操作的原子性，那就有可能会产生预期外的情况。
 因此操作的互斥性问题也可以理解为一个需要保证时序性和原子性的问题。
 
-事实上，操作互斥性问题并非只存在于分布式环境，在单一系统环境下，多个线程抢占共享资源也会遇上这个问题，*锁*就是用来控制多个线程执行时对资源的并发访问的，
+事实上，操作互斥性问题并非只存在于分布式环境，在单一系统环境下，多个线程抢占共享资源也会遇上这个问题，*锁* 就是用来控制多个线程执行时对资源的并发访问的，
 保证一个资源只允许在任意时候只有一个执行线程对其进行写操作。
 
-在传统单系统中，如所有线程都在同一个JVM进程中的应用，可以利用Java提供的锁机制对共享资源进行同步。但是在分布式环境中，用Java的锁机制就无法实现了，
-*分布式锁*成了一种比较常见而高效的解决方案，常见的实现方案有：Redis、Zookeeper
+在传统单系统中，如所有线程都在同一个JVM进程中的应用，可以利用Java提供的锁机制对共享资源进行同步。但是在分布式环境中，用Java的锁机制就无法实现了，
+*分布式锁* 成了一种比较常见而高效的解决方案，常见的实现方案有：Redis、Zookeeper
 
 这里只基于Redis进行讨论。
 
@@ -29,7 +29,7 @@ Java里面的锁机制其实就是获取一个同步状态，那么利用Redis�
 SETNX resource_name value
 ```
 
-以上命令的意思是如果名称为`resource_name`的key不存在，那么给`resource_name`这个key设置一个value值，这个命令保证了锁的互斥性，即同一时刻只能有一个进程（线程）获取到锁。
+以上命令的意思是如果名称为resource_name的key不存在，那么给resource_name这个key设置一个value值，这个命令保证了锁的互斥性，即同一时刻只能有一个进程（线程）获取到锁。
 
 但是以上存在一个问题，例如场景：
 
@@ -41,7 +41,7 @@ SETNX resource_name value
 
 这种情况就会出现"死锁"：客户端A在释放锁之前崩溃，那么客户端A的锁就会一直存在，其他的客户端永远都获取不到锁。
 
-这个问题可以通过给锁加一个自动释放的过期时间来解决，但是如果通过Redis的以下两条命令又会存在操作*非原子性*的问题
+这个问题可以通过给锁加一个自动释放的过期时间来解决，但是如果通过Redis的以下两条命令又会存在操作 *非原子性* 的问题
 
 ```
 SETNX resource_name value
@@ -78,7 +78,7 @@ Java版本获取锁的简单实现如下：
  */
 public void lock() throws InterruptedException {
     for (;;){
-        String ret = rt.set(lockKey, lockValue, SET_IF_NOT_EXIST, SET_WITH_EXPIRE, lockExpireTime);//expire in lockExpireTime
+        String ret = rt.set(lockKey, lockValue, SET_IF_NOT_EXIST, SET_WITH_EXPIRE, lockExpireTime);
         if (LOCK_SUCCESS.equals(ret)) {
             break;
         }
@@ -142,8 +142,11 @@ public boolean unlock() {
 
 参考
 ---
-* https://mp.weixin.qq.com/s?__biz=MzA4NTg1MjM0Mg==&mid=2657261514&idx=1&sn=47b1a63f065347943341910dddbb785d&chksm=84479e13b3301705ea29c86f457ad74010eba8a8a5c12a7f54bcf264a4a8c9d6adecbe32ad0b&scene=21#wechat_redirect
-* https://crossoverjie.top/2018/03/29/distributed-lock/distributed-lock-redis/
-* [Redis 深度历险：核心原理与应用实践](https://juejin.im/book/5afc2e5f6fb9a07a9b362527)
+* 基于Redis的分布式锁到底安全吗（上）[2]
+* 如何优雅地用Redis实现分布式锁[3]
+* Redis 深度历险：核心原理与应用实践[4]
 
 [1]: https://redis.io/commands/set
+[2]: https://mp.weixin.qq.com/s?__biz=MzA4NTg1MjM0Mg==&mid=2657261514&idx=1&sn=47b1a63f065347943341910dddbb785d&chksm=84479e13b3301705ea29c86f457ad74010eba8a8a5c12a7f54bcf264a4a8c9d6adecbe32ad0b&scene=21#wechat_redirect
+[3]: http://www.redis.cn/articles/20181020004.html
+[4]: https://juejin.im/book/5afc2e5f6fb9a07a9b362527
