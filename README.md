@@ -48,7 +48,7 @@ SETNX resource_name value
 EXPIRE resource_name max_lock_time
 ```
 
-好在Redis2.6.12开始为我们提供了`SET resource_name value NX PX|EX max_lock_time`[1]这个命令，可以保证`SETNX`和`EXPIRE`两个操作的原子性。
+好在Redis2.6.12开始为我们提供了[`SET resource_name value NX PX|EX max_lock_time`][1]这个命令，可以保证`SETNX`和`EXPIRE`两个操作的原子性。
 
 解决了"死锁"这个问题以后，还剩下一个问题，如何保证一个客户端加的锁不会被其他客户端释放，例如场景：
 
@@ -142,9 +142,9 @@ public boolean unlock() {
 
 参考
 ---
-* 基于Redis的分布式锁到底安全吗（上）[2]
-* 如何优雅地用Redis实现分布式锁[3]
-* Redis 深度历险：核心原理与应用实践[4]
+* [基于Redis的分布式锁到底安全吗（上）][2]
+* [如何优雅地用Redis实现分布式锁][3]
+* [Redis 深度历险：核心原理与应用实践][4]
 
 [1]: https://redis.io/commands/set
 [2]: https://mp.weixin.qq.com/s?__biz=MzA4NTg1MjM0Mg==&mid=2657261514&idx=1&sn=47b1a63f065347943341910dddbb785d&chksm=84479e13b3301705ea29c86f457ad74010eba8a8a5c12a7f54bcf264a4a8c9d6adecbe32ad0b&scene=21#wechat_redirect
