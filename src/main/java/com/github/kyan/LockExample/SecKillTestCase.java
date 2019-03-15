@@ -1,4 +1,6 @@
-package com.github.kyan;
+package com.github.kyan.LockExample;
+
+import com.github.kyan.RedisLock;
 
 import java.time.LocalTime;
 import java.util.concurrent.ExecutorService;
@@ -39,28 +41,28 @@ public class SecKillTestCase {
 
 class SecKillService {
 
-    RedisDistLock redisDistLock;
+    RedisLock redisLock;
     int left;
 
     public SecKillService(String productName, int total) {
-        redisDistLock = new RedisDistLock(productName);
+        redisLock = new RedisLock(productName);
         left = total;
     }
 
-    public boolean handlerOrder() {
+    public boolean handlerOrder() throws InterruptedException {
         if (left <= 0) {
             System.out.println("Product already sold out!");
             return true;
         }
-        if (redisDistLock.tryLock(30000, 300000)) {
+        if (redisLock.tryLock(30000)) {
             if (left > 0) {
                 --left;
                 System.out.println(String.format("Thread: %s get product success, %d left; Time at: %s",
-                        Thread.currentThread().getName(), left, LocalTime.now()));
+                        Thread.currentThread().getId(), left, LocalTime.now()));
             } else {
-                System.out.println(String.format("Tread: %s get product failed, product sold out!", Thread.currentThread().getName()));
+                System.out.println(String.format("Tread: %s get product failed, product sold out!", Thread.currentThread().getId()));
             }
-            redisDistLock.unlock();
+            redisLock.unlock();
             return true;
         }
         return false;
@@ -81,10 +83,10 @@ class BuyHandlerThread implements Runnable {
         while (true) {
             try {
                 Thread.sleep((long) (Math.random() * 5000));
+                boolean ret = service.handlerOrder();
+                if (ret) break;
             } catch (InterruptedException e) {
             }
-            boolean ret = service.handlerOrder();
-            if (ret) break;
         }
     }
 }
